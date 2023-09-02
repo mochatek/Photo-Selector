@@ -1,3 +1,12 @@
+"""
+    Photo$ - Photo Selector
+
+    Description: A Tkinter application to select photos from a folder and copy them to another folder
+    Developer  : Akash S Panickar (MochaTek)
+    Year       : 2023
+    Packaging  : pyinstaller --onefile --icon=app.ico --name=Photo$ --noconsole --add-data "app.ico;."  main.py
+"""
+
 from tkinter import (
     Tk,
     Frame,
@@ -18,10 +27,12 @@ from os import listdir
 from os.path import exists, join, dirname, basename
 from json import dump, load
 from shutil import copyfile
+
 # Show app icon in taskbar
 try:
     from ctypes import windll
-    myappid = 'Mochatek.Photo$.v1.0'
+
+    myappid = "Mochatek.Photo$.v1.0"
     windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 except:
     pass
