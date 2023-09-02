@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 MIN_ZOOM = 0.5
 INIT_ZOOM = 1.0
 MAX_ZOOM = 2.5
+BG_COLOR = '#D3D3D3'
 
 
 class ImageSelectorApp:
@@ -39,6 +40,7 @@ class ImageSelectorApp:
             root,
             width=self.root.winfo_screenwidth(),
             height=self.root.winfo_screenheight() - 125,
+            bg=BG_COLOR
         )
         image_frame.pack(padx=10, pady=5)
 
@@ -97,9 +99,9 @@ class ImageSelectorApp:
                     int(image.height * self.image_zoom),
                 )
             )
-            photo = ImageTk.PhotoImage(image=image)
-            self.image_label.config(image=photo)
-            self.image_label.photo = photo
+            image = ImageTk.PhotoImage(image=image)
+            self.image_label.config(image=image)
+            self.image_label.photo = image
 
             if self.current_index in self.selected_images:
                 self.select_button.config(text="Deselect")
@@ -113,11 +115,13 @@ class ImageSelectorApp:
     def prev_image(self):
         if self.image_paths:
             self.current_index = (self.current_index - 1) % len(self.image_paths)
+            self.image_zoom = INIT_ZOOM
             self.show_image()
 
     def next_image(self):
         if self.image_paths:
             self.current_index = (self.current_index + 1) % len(self.image_paths)
+            self.image_zoom = INIT_ZOOM
             self.show_image()
 
     def toggle_select_image(self):
@@ -157,6 +161,7 @@ class ImageSelectorApp:
             selected_index = int(selected_index[0])
             image_index = list(self.selected_images.keys())[selected_index]
             self.current_index = image_index
+            self.image_zoom = INIT_ZOOM
             self.show_image()
 
 
