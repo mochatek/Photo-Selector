@@ -12,12 +12,12 @@ BG_COLOR = "#D3D3D3"
 
 class ImageSelectorApp:
     def __init__(self, root):
-        self.root = root
-        self.root.title("Image Selector")
         self.image_paths = []
         self.current_index = 0
         self.selected_images = {}
         self.image_zoom = INIT_ZOOM
+
+        root.title("Photo$")
 
         side_panel = Frame(root)
         side_panel.pack(side="left", fill="y", padx=5, pady=5)
@@ -34,8 +34,8 @@ class ImageSelectorApp:
 
         image_frame = Frame(
             root,
-            width=self.root.winfo_screenwidth(),
-            height=self.root.winfo_screenheight() - 125,
+            width=root.winfo_screenwidth(),
+            height=root.winfo_screenheight() - 125,
             bg=BG_COLOR,
         )
         image_frame.pack(padx=10, pady=5)
@@ -64,10 +64,14 @@ class ImageSelectorApp:
         zoom_out_button.pack(side="left", padx=5)
 
         # Maximize window
-        self.root.state("zoomed")
+        root.state("zoomed")
 
         self.image_label.bind("<MouseWheel>", self.on_mousewheel)
         self.image_listbox.bind("<<ListboxSelect>>", self.show_selected_image)
+
+        root.bind("<Left>", self.prev_image)
+        root.bind("<Right>", self.next_image)
+        root.bind("<Return>", self.toggle_select_image)
 
     def load_folder(self):
         folder_path = filedialog.askdirectory()
@@ -106,19 +110,19 @@ class ImageSelectorApp:
                 self.select_button.config(text="Select")
                 self.image_label.config(borderwidth=0, relief="flat")
 
-    def prev_image(self):
+    def prev_image(self, event=None):
         if self.image_paths:
             self.current_index = (self.current_index - 1) % len(self.image_paths)
             self.image_zoom = INIT_ZOOM
             self.show_image()
 
-    def next_image(self):
+    def next_image(self, event=None):
         if self.image_paths:
             self.current_index = (self.current_index + 1) % len(self.image_paths)
             self.image_zoom = INIT_ZOOM
             self.show_image()
 
-    def toggle_select_image(self):
+    def toggle_select_image(self, event=None):
         if self.image_paths:
             if self.current_index in self.selected_images:
                 del self.selected_images[self.current_index]
