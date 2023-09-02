@@ -15,9 +15,16 @@ from tkinter.ttk import Notebook, Frame as TFrame, Button as TButton
 from tkinter import filedialog
 from PIL import Image, ImageTk
 from os import listdir
-from os.path import exists, join, basename
+from os.path import exists, join, dirname, basename
 from json import dump, load
 from shutil import copyfile
+# Show app icon in taskbar
+try:
+    from ctypes import windll
+    myappid = 'Mochatek.Photo$.v1.0'
+    windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+except:
+    pass
 
 
 MIN_ZOOM = 0.5
@@ -51,7 +58,7 @@ class ImageSelectorApp:
 
         root.title("Photo$")
         root.state("zoomed")
-        root.iconbitmap("app.ico")
+        root.iconbitmap(join(dirname(__file__), "app.ico"))
 
         side_panel = Frame(root)
         side_panel.pack(side="left", fill="y", padx=WINDOW_GAP, pady=WINDOW_GAP)
