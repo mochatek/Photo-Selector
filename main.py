@@ -67,7 +67,7 @@ class ImageSelectorApp:
         self.selected_images = {}
         self.image_zoom = INIT_ZOOM
 
-        root.title("Photo$")
+        root.title("Photo$ © MochaTek ‣ 2023")
         root.state("zoomed")
         root.iconbitmap(join(dirname(__file__), "app.ico"))
 
