@@ -7,7 +7,7 @@ from PIL import Image, ImageTk
 MIN_ZOOM = 0.5
 INIT_ZOOM = 1.0
 MAX_ZOOM = 2.5
-BG_COLOR = '#D3D3D3'
+BG_COLOR = "#D3D3D3"
 
 
 class ImageSelectorApp:
@@ -19,28 +19,24 @@ class ImageSelectorApp:
         self.selected_images = {}
         self.image_zoom = INIT_ZOOM
 
-        self.side_panel = Frame(root)
-        self.side_panel.pack(side="left", fill="y", padx=5, pady=5)
+        side_panel = Frame(root)
+        side_panel.pack(side="left", fill="y", padx=5, pady=5)
 
-        self.load_button = Button(
-            self.side_panel, text="Browse", command=self.load_folder
-        )
-        self.load_button.pack(side="top", fill='x')
+        load_button = Button(side_panel, text="Browse", command=self.load_folder)
+        load_button.pack(side="top", fill="x")
 
-        self.image_listbox = Listbox(self.side_panel, selectmode=SINGLE)
+        self.image_listbox = Listbox(side_panel, selectmode=SINGLE)
         self.image_listbox.pack(side="left", fill="both", expand=True, pady=5)
 
-        self.listbox_scrollbar = Scrollbar(
-            self.side_panel, command=self.image_listbox.yview
-        )
-        self.listbox_scrollbar.pack(side="right", fill="y")
-        self.image_listbox.config(yscrollcommand=self.listbox_scrollbar.set)
+        listbox_scrollbar = Scrollbar(side_panel, command=self.image_listbox.yview)
+        listbox_scrollbar.pack(side="right", fill="y")
+        self.image_listbox.config(yscrollcommand=listbox_scrollbar.set)
 
         image_frame = Frame(
             root,
             width=self.root.winfo_screenwidth(),
             height=self.root.winfo_screenheight() - 125,
-            bg=BG_COLOR
+            bg=BG_COLOR,
         )
         image_frame.pack(padx=10, pady=5)
 
@@ -50,24 +46,22 @@ class ImageSelectorApp:
         button_frame = Frame(root)
         button_frame.pack(side="bottom", pady=10)
 
-        self.prev_button = Button(
-            button_frame, text="Previous", command=self.prev_image
-        )
-        self.prev_button.pack(side="left", padx=5)
+        prev_button = Button(button_frame, text="Previous", command=self.prev_image)
+        prev_button.pack(side="left", padx=5)
 
         self.select_button = Button(
             button_frame, text="Select", command=self.toggle_select_image
         )
         self.select_button.pack(side="left", padx=5)
 
-        self.next_button = Button(button_frame, text="Next", command=self.next_image)
-        self.next_button.pack(side="left", padx=5)
+        next_button = Button(button_frame, text="Next", command=self.next_image)
+        next_button.pack(side="left", padx=5)
 
-        self.zoom_in_button = Button(button_frame, text="➕", command=self.zoom_in)
-        self.zoom_in_button.pack(side="left", padx=5)
+        zoom_in_button = Button(button_frame, text="➕", command=self.zoom_in)
+        zoom_in_button.pack(side="left", padx=5)
 
-        self.zoom_out_button = Button(button_frame, text="➖", command=self.zoom_out)
-        self.zoom_out_button.pack(side="left", padx=5)
+        zoom_out_button = Button(button_frame, text="➖", command=self.zoom_out)
+        zoom_out_button.pack(side="left", padx=5)
 
         # Maximize window
         self.root.state("zoomed")
