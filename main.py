@@ -17,16 +17,18 @@ from tkinter import (
     Toplevel,
     Entry,
     messagebox,
+    DoubleVar,
     SINGLE,
     END,
 )
-from tkinter.ttk import Notebook, Frame as TFrame, Button as TButton
+from tkinter.ttk import Notebook, Frame as TFrame, Button as TButton, Progressbar
 from tkinter import filedialog
 from PIL import Image, ImageTk
 from os import listdir
 from os.path import exists, join, dirname, basename
 from json import dump, load
 from shutil import copyfile
+from threading import Thread, Event
 
 # Show app icon in taskbar
 try:
@@ -264,11 +266,30 @@ class ImageSelectorApp:
                 with open(join(json_path, "selection.json"), "w") as json_file:
                     dump(selected_files, json_file)
             except Exception as e:
-                messagebox.showinfo("Error", str(e))
+                messagebox.showerror("Error", str(e))
             else:
                 messagebox.showinfo("Success", "Selection saved as JSON.")
 
-        def copy_selected_files(sourceEntry: Entry, targetEntry: Entry):
+        def copy_files(files: list, target_folder: str, progress: DoubleVar, stop_event: Event):
+            total_files = len(files)
+            copied_files = 0
+
+            for source_file in files:
+                if stop_event.is_set():
+                    return
+
+                try:
+                    file_name = basename(source_file)
+                    target_file = join(target_folder, file_name)
+                    copyfile(source_file, target_file)
+                except:
+                    pass
+                copied_files += 1
+                progress.set(100.0 * copied_files / total_files)
+                export_window.update()
+            messagebox.showinfo("Success", "Files copied successfully.")
+
+        def copy_selected_files(sourceEntry: Entry, targetEntry: Entry, progress_bar: Progressbar, progress: DoubleVar):
             __selected_files = selected_files
             source_json_path = sourceEntry.get()
             target_folder = targetEntry.get()
@@ -285,17 +306,22 @@ class ImageSelectorApp:
                     with open(source_json_path, "r") as json_file:
                         __selected_files = load(json_file)
                 except Exception as e:
-                    messagebox.showinfo("Error", str(e))
+                    messagebox.showerror("Error", str(e))
                     return
 
-            for source_file in __selected_files:
-                try:
-                    file_name = basename(source_file)
-                    target_file = join(target_folder, file_name)
-                    copyfile(source_file, target_file)
-                except:
-                    pass
-            messagebox.showinfo("Success", "Files copied successfully.")
+            stop_event = Event()
+            copy_thread = Thread(target=copy_files, args=(__selected_files, target_folder, progress, stop_event))
+            copy_thread.start()
+
+            progress_bar.grid(row=2, column=0, columnspan=3,padx=WINDOW_GAP, pady=WINDOW_GAP, sticky="ew")
+
+            def on_closing():
+                if copy_thread.is_alive():
+                    stop_event.set()
+                    copy_thread.join()
+                export_window.destroy()
+
+            export_window.protocol("WM_DELETE_WINDOW", on_closing)
 
         Label(save_tab, text="Select Target Folder:").grid(
             row=1, column=0, padx=WINDOW_GAP, pady=WINDOW_GAP
@@ -336,14 +362,16 @@ class ImageSelectorApp:
         copy_destination_browse_button.grid(
             row=1, column=2, padx=WINDOW_GAP, pady=WINDOW_GAP
         )
+        progress_var = DoubleVar()
+        progress_bar = Progressbar(copy_tab, variable=progress_var, maximum=100)
         copy_button = TButton(
             copy_tab,
             text="Copy",
             command=lambda: copy_selected_files(
-                copy_json_entry, copy_destination_entry
+                copy_json_entry, copy_destination_entry, progress_bar, progress_var
             ),
         )
-        copy_button.grid(row=2, column=0, columnspan=3, pady=WINDOW_GAP)
+        copy_button.grid(row=3, column=0, columnspan=3, pady=WINDOW_GAP)
 
 
 if __name__ == "__main__":
