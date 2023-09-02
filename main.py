@@ -1,7 +1,23 @@
-import os
-from tkinter import Tk, Frame, Button, Label, Listbox, Scrollbar, SINGLE, END
+from tkinter import (
+    Tk,
+    Frame,
+    Button,
+    Label,
+    Listbox,
+    Scrollbar,
+    Toplevel,
+    Entry,
+    messagebox,
+    SINGLE,
+    END,
+)
+from tkinter.ttk import Notebook, Frame as TFrame, Button as TButton
 from tkinter import filedialog
 from PIL import Image, ImageTk
+from os import listdir
+from os.path import exists, join, basename
+from json import dump, load
+from shutil import copyfile
 
 
 MIN_ZOOM = 0.5
@@ -11,6 +27,19 @@ ZOOM_FACTOR = 1.2
 BG_COLOR = "#D3D3D3"
 ELEM_GAP = 5
 WINDOW_GAP = 10
+SUPPORTED_IMG_FORMATS = (
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".bmp",
+    ".ppm",
+    ".pgm",
+    ".pbm",
+    ".tif",
+    ".tiff",
+    ".ico",
+)
 
 
 class ImageSelectorApp:
@@ -22,6 +51,7 @@ class ImageSelectorApp:
 
         root.title("Photo$")
         root.state("zoomed")
+        root.iconbitmap("app.ico")
 
         side_panel = Frame(root)
         side_panel.pack(side="left", fill="y", padx=WINDOW_GAP, pady=WINDOW_GAP)
@@ -32,18 +62,28 @@ class ImageSelectorApp:
         load_button = Button(button_frame, text="📁 Browse", command=self.load_folder)
         load_button.pack(side="left", padx=ELEM_GAP)
 
-        export_button = Button(button_frame, text="💾 Export", command=self.load_folder)
+        export_button = Button(
+            button_frame,
+            text="💾 Export",
+            command=lambda: self.open_export_popup(
+                root, list(self.selected_images.values())
+            ),
+        )
         export_button.pack(side="left", padx=ELEM_GAP)
 
         self.image_listbox = Listbox(side_panel, selectmode=SINGLE)
-        self.image_listbox.pack(side="left", fill="both", expand=True, pady=(ELEM_GAP, 0))
+        self.image_listbox.pack(
+            side="left", fill="both", expand=True, pady=(ELEM_GAP, 0)
+        )
 
         listbox_scrollbar = Scrollbar(side_panel, command=self.image_listbox.yview)
         listbox_scrollbar.pack(side="right", fill="y")
         self.image_listbox.config(yscrollcommand=listbox_scrollbar.set)
 
         controls_frame = Frame(root)
-        controls_frame.pack(side="bottom", padx=(0, WINDOW_GAP), pady=(ELEM_GAP, WINDOW_GAP))
+        controls_frame.pack(
+            side="bottom", padx=(0, WINDOW_GAP), pady=(ELEM_GAP, WINDOW_GAP)
+        )
 
         prev_button = Button(controls_frame, text="⬅️", command=self.prev_image)
         prev_button.pack(side="left", padx=ELEM_GAP)
@@ -64,8 +104,10 @@ class ImageSelectorApp:
 
         image_frame = Frame(
             root,
-            width=root.winfo_screenwidth() - (side_panel.winfo_width() + (2 * WINDOW_GAP) + ELEM_GAP),
-            height=root.winfo_screenheight() - (controls_frame.winfo_height() + (2 * WINDOW_GAP) + ELEM_GAP),
+            width=root.winfo_screenwidth()
+            - (side_panel.winfo_width() + (2 * WINDOW_GAP) + ELEM_GAP),
+            height=root.winfo_screenheight()
+            - (controls_frame.winfo_height() + (2 * WINDOW_GAP) + ELEM_GAP),
             bg=BG_COLOR,
         )
         image_frame.pack(padx=(0, WINDOW_GAP), pady=(WINDOW_GAP, 0))
@@ -84,9 +126,9 @@ class ImageSelectorApp:
         folder_path = filedialog.askdirectory()
         if folder_path:
             self.image_paths = [
-                os.path.join(folder_path, filename)
-                for filename in os.listdir(folder_path)
-                if filename.endswith((".jpg", ".png", ".jpeg"))
+                join(folder_path, filename)
+                for filename in listdir(folder_path)
+                if filename.lower().endswith(SUPPORTED_IMG_FORMATS)
             ]
             self.current_index = 0
             self.image_zoom = INIT_ZOOM
@@ -168,6 +210,122 @@ class ImageSelectorApp:
             self.current_index = image_index
             self.image_zoom = INIT_ZOOM
             self.show_image()
+
+    def open_export_popup(self, root: Tk, selected_files: list):
+        export_window = Toplevel(root)
+        export_window.title("Export")
+        export_window.transient(root)  # Stack popup on top of main
+        export_window.grab_set()  # Disable access to main
+
+        tab_control = Notebook(export_window)
+        save_tab = TFrame(tab_control)
+        copy_tab = TFrame(tab_control)
+        tab_control.add(save_tab, text="Save selection as JSON")
+        tab_control.add(copy_tab, text="Copy selected files")
+        tab_control.pack(fill="both", expand=True)
+
+        def browse_jsonfile(entry: Entry):
+            json_file = filedialog.askopenfilename(filetypes=[("JSON Files", "*.json")])
+            if json_file:
+                entry.delete(0, END)
+                entry.insert(0, json_file)
+
+        def browse_destination(entry: Entry):
+            folder = filedialog.askdirectory()
+            if folder:
+                entry.delete(0, END)
+                entry.insert(0, folder)
+
+        def export_to_json(entry: Entry):
+            json_path = entry.get()
+            if not exists(json_path):
+                messagebox.showerror("Error", "Please select a valid path.")
+                return
+
+            try:
+                with open(join(json_path, "selection.json"), "w") as json_file:
+                    dump(selected_files, json_file)
+            except Exception as e:
+                messagebox.showinfo("Error", str(e))
+            else:
+                messagebox.showinfo("Success", "Selection saved as JSON.")
+
+        def copy_selected_files(sourceEntry: Entry, targetEntry: Entry):
+            __selected_files = selected_files
+            source_json_path = sourceEntry.get()
+            target_folder = targetEntry.get()
+
+            if not exists(target_folder):
+                messagebox.showerror("Error", "Please select a valid destination path.")
+                return
+
+            if source_json_path:
+                if not exists(source_json_path):
+                    messagebox.showerror("Error", "Please select a valid JSON file.")
+                    return
+                try:
+                    with open(source_json_path, "r") as json_file:
+                        __selected_files = load(json_file)
+                except Exception as e:
+                    messagebox.showinfo("Error", str(e))
+                    return
+
+            for source_file in __selected_files:
+                try:
+                    file_name = basename(source_file)
+                    target_file = join(target_folder, file_name)
+                    copyfile(source_file, target_file)
+                except:
+                    pass
+            messagebox.showinfo("Success", "Files copied successfully.")
+
+        Label(save_tab, text="Select Target Folder:").grid(
+            row=1, column=0, padx=WINDOW_GAP, pady=WINDOW_GAP
+        )
+        save_json_entry = Entry(save_tab, width=40)
+        save_json_entry.grid(row=1, column=1, padx=WINDOW_GAP, pady=WINDOW_GAP)
+        save_json_browse_button = TButton(
+            save_tab,
+            text="Browse",
+            command=lambda: browse_destination(save_json_entry),
+        )
+        save_json_browse_button.grid(row=1, column=2, padx=WINDOW_GAP, pady=WINDOW_GAP)
+        save_button = TButton(
+            save_tab, text="Save", command=lambda: export_to_json(save_json_entry)
+        )
+        save_button.grid(row=2, column=0, columnspan=3, pady=WINDOW_GAP)
+
+        Label(copy_tab, text="Select JSON File:").grid(
+            row=0, column=0, padx=WINDOW_GAP, pady=WINDOW_GAP
+        )
+        copy_json_entry = Entry(copy_tab, width=40)
+        copy_json_entry.grid(row=0, column=1, padx=WINDOW_GAP, pady=WINDOW_GAP)
+        copy_json_browse_button = TButton(
+            copy_tab, text="Browse", command=lambda: browse_jsonfile(copy_json_entry)
+        )
+        copy_json_browse_button.grid(row=0, column=2, padx=WINDOW_GAP, pady=WINDOW_GAP)
+
+        Label(copy_tab, text="Select Destination Folder:").grid(
+            row=1, column=0, padx=WINDOW_GAP, pady=WINDOW_GAP
+        )
+        copy_destination_entry = Entry(copy_tab, width=40)
+        copy_destination_entry.grid(row=1, column=1, padx=WINDOW_GAP, pady=WINDOW_GAP)
+        copy_destination_browse_button = TButton(
+            copy_tab,
+            text="Browse",
+            command=lambda: browse_destination(copy_destination_entry),
+        )
+        copy_destination_browse_button.grid(
+            row=1, column=2, padx=WINDOW_GAP, pady=WINDOW_GAP
+        )
+        copy_button = TButton(
+            copy_tab,
+            text="Copy",
+            command=lambda: copy_selected_files(
+                copy_json_entry, copy_destination_entry
+            ),
+        )
+        copy_button.grid(row=2, column=0, columnspan=3, pady=WINDOW_GAP)
 
 
 if __name__ == "__main__":
