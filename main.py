@@ -7,64 +7,71 @@ from PIL import Image, ImageTk
 MIN_ZOOM = 0.5
 INIT_ZOOM = 1.0
 MAX_ZOOM = 2.5
+ZOOM_FACTOR = 1.2
 BG_COLOR = "#D3D3D3"
+ELEM_GAP = 5
+WINDOW_GAP = 10
 
 
 class ImageSelectorApp:
-    def __init__(self, root):
+    def __init__(self, root: Tk):
         self.image_paths = []
         self.current_index = 0
         self.selected_images = {}
         self.image_zoom = INIT_ZOOM
 
         root.title("Photo$")
+        root.state("zoomed")
 
         side_panel = Frame(root)
-        side_panel.pack(side="left", fill="y", padx=5, pady=5)
+        side_panel.pack(side="left", fill="y", padx=WINDOW_GAP, pady=WINDOW_GAP)
 
-        load_button = Button(side_panel, text="Browse", command=self.load_folder)
-        load_button.pack(side="top", fill="x")
+        button_frame = Frame(side_panel)
+        button_frame.pack(side="top", fill="x")
+
+        load_button = Button(button_frame, text="📁 Browse", command=self.load_folder)
+        load_button.pack(side="left", padx=ELEM_GAP)
+
+        export_button = Button(button_frame, text="💾 Export", command=self.load_folder)
+        export_button.pack(side="left", padx=ELEM_GAP)
 
         self.image_listbox = Listbox(side_panel, selectmode=SINGLE)
-        self.image_listbox.pack(side="left", fill="both", expand=True, pady=5)
+        self.image_listbox.pack(side="left", fill="both", expand=True, pady=(ELEM_GAP, 0))
 
         listbox_scrollbar = Scrollbar(side_panel, command=self.image_listbox.yview)
         listbox_scrollbar.pack(side="right", fill="y")
         self.image_listbox.config(yscrollcommand=listbox_scrollbar.set)
 
+        controls_frame = Frame(root)
+        controls_frame.pack(side="bottom", padx=(0, WINDOW_GAP), pady=(ELEM_GAP, WINDOW_GAP))
+
+        prev_button = Button(controls_frame, text="⬅️", command=self.prev_image)
+        prev_button.pack(side="left", padx=ELEM_GAP)
+
+        self.select_button = Button(
+            controls_frame, text="❤️", command=self.toggle_select_image
+        )
+        self.select_button.pack(side="left", padx=ELEM_GAP)
+
+        next_button = Button(controls_frame, text="➡️", command=self.next_image)
+        next_button.pack(side="left", padx=ELEM_GAP)
+
+        zoom_in_button = Button(controls_frame, text="➕", command=self.zoom_in)
+        zoom_in_button.pack(side="left", padx=ELEM_GAP)
+
+        zoom_out_button = Button(controls_frame, text="➖", command=self.zoom_out)
+        zoom_out_button.pack(side="left", padx=ELEM_GAP)
+
         image_frame = Frame(
             root,
-            width=root.winfo_screenwidth(),
-            height=root.winfo_screenheight() - 125,
+            width=root.winfo_screenwidth() - (side_panel.winfo_width() + (2 * WINDOW_GAP) + ELEM_GAP),
+            height=root.winfo_screenheight() - (controls_frame.winfo_height() + (2 * WINDOW_GAP) + ELEM_GAP),
             bg=BG_COLOR,
         )
-        image_frame.pack(padx=10, pady=5)
+        image_frame.pack(padx=(0, WINDOW_GAP), pady=(WINDOW_GAP, 0))
 
         self.image_label = Label(image_frame)
         self.image_label.place(relx=0.5, rely=0.5, anchor="center")
-
-        button_frame = Frame(root)
-        button_frame.pack(side="bottom", pady=10)
-
-        prev_button = Button(button_frame, text="Previous", command=self.prev_image)
-        prev_button.pack(side="left", padx=5)
-
-        self.select_button = Button(
-            button_frame, text="Select", command=self.toggle_select_image
-        )
-        self.select_button.pack(side="left", padx=5)
-
-        next_button = Button(button_frame, text="Next", command=self.next_image)
-        next_button.pack(side="left", padx=5)
-
-        zoom_in_button = Button(button_frame, text="➕", command=self.zoom_in)
-        zoom_in_button.pack(side="left", padx=5)
-
-        zoom_out_button = Button(button_frame, text="➖", command=self.zoom_out)
-        zoom_out_button.pack(side="left", padx=5)
-
-        # Maximize window
-        root.state("zoomed")
 
         self.image_label.bind("<MouseWheel>", self.on_mousewheel)
         self.image_listbox.bind("<<ListboxSelect>>", self.show_selected_image)
@@ -134,11 +141,11 @@ class ImageSelectorApp:
             self.show_image()
 
     def zoom_in(self):
-        self.image_zoom = min(MAX_ZOOM, self.image_zoom * 1.2)
+        self.image_zoom = min(MAX_ZOOM, self.image_zoom * ZOOM_FACTOR)
         self.show_image()
 
     def zoom_out(self):
-        self.image_zoom = max(self.image_zoom / 1.2, MIN_ZOOM)
+        self.image_zoom = max(self.image_zoom / ZOOM_FACTOR, MIN_ZOOM)
         self.show_image()
 
     def on_mousewheel(self, event):
