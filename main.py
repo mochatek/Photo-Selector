@@ -68,6 +68,7 @@ class ImageSelectorApp:
         self.current_index = 0
         self.selected_images = {}
         self.image_zoom = INIT_ZOOM
+        self.image_contain_width, self.image_contain_height = 0, 0
 
         root.title("Photo$ © MochaTek ‣ 2023")
         root.state("zoomed")
@@ -122,12 +123,18 @@ class ImageSelectorApp:
         zoom_out_button = Button(controls_frame, text="➖", command=self.zoom_out)
         zoom_out_button.pack(side="left", padx=ELEM_GAP)
 
+        (
+            self.image_contain_width,
+            self.image_contain_height,
+        ) = root.winfo_screenwidth() - (
+            side_panel.winfo_width() + (2 * WINDOW_GAP) + ELEM_GAP
+        ), root.winfo_screenheight() - (
+            controls_frame.winfo_height() + (2 * WINDOW_GAP) + ELEM_GAP
+        )
         image_frame = Frame(
             root,
-            width=root.winfo_screenwidth()
-            - (side_panel.winfo_width() + (2 * WINDOW_GAP) + ELEM_GAP),
-            height=root.winfo_screenheight()
-            - (controls_frame.winfo_height() + (2 * WINDOW_GAP) + ELEM_GAP),
+            width=self.image_contain_width,
+            height=self.image_contain_height,
             bg=BG_COLOR,
         )
         image_frame.pack(padx=(0, WINDOW_GAP), pady=(WINDOW_GAP, 0))
@@ -156,16 +163,26 @@ class ImageSelectorApp:
             self.update_image_listbox()
             self.show_image()
 
+    def __resize_image(self, image: Image):
+        scale = self.image_zoom
+        # Scale image to best fit on initial load
+        if self.image_zoom == INIT_ZOOM:
+            scale_x = self.image_contain_width / image.width
+            scale_y = self.image_contain_height / image.height
+            scale = min(scale_x, scale_y)
+
+        return image.resize(
+            (
+                int(image.width * scale),
+                int(image.height * scale),
+            )
+        )
+
     def show_image(self):
         if self.image_paths:
             image_path = self.image_paths[self.current_index]
             image = Image.open(image_path)
-            image = image.resize(
-                (
-                    int(image.width * self.image_zoom),
-                    int(image.height * self.image_zoom),
-                )
-            )
+            image = self.__resize_image(image)
             image = ImageTk.PhotoImage(image=image)
             self.image_label.config(image=image)
             self.image_label.photo = image
@@ -270,7 +287,9 @@ class ImageSelectorApp:
             else:
                 messagebox.showinfo("Success", "Selection saved as JSON.")
 
-        def copy_files(files: list, target_folder: str, progress: DoubleVar, stop_event: Event):
+        def copy_files(
+            files: list, target_folder: str, progress: DoubleVar, stop_event: Event
+        ):
             total_files = len(files)
             copied_files = 0
 
@@ -289,7 +308,12 @@ class ImageSelectorApp:
                 export_window.update()
             messagebox.showinfo("Success", "Files copied successfully.")
 
-        def copy_selected_files(sourceEntry: Entry, targetEntry: Entry, progress_bar: Progressbar, progress: DoubleVar):
+        def copy_selected_files(
+            sourceEntry: Entry,
+            targetEntry: Entry,
+            progress_bar: Progressbar,
+            progress: DoubleVar,
+        ):
             __selected_files = selected_files
             source_json_path = sourceEntry.get()
             target_folder = targetEntry.get()
@@ -310,10 +334,20 @@ class ImageSelectorApp:
                     return
 
             stop_event = Event()
-            copy_thread = Thread(target=copy_files, args=(__selected_files, target_folder, progress, stop_event))
+            copy_thread = Thread(
+                target=copy_files,
+                args=(__selected_files, target_folder, progress, stop_event),
+            )
             copy_thread.start()
 
-            progress_bar.grid(row=2, column=0, columnspan=3,padx=WINDOW_GAP, pady=WINDOW_GAP, sticky="ew")
+            progress_bar.grid(
+                row=2,
+                column=0,
+                columnspan=3,
+                padx=WINDOW_GAP,
+                pady=WINDOW_GAP,
+                sticky="ew",
+            )
 
             def on_closing():
                 if copy_thread.is_alive():
