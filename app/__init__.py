@@ -66,6 +66,7 @@ class ImageSelectorApp:
         root.title("Photo$ © MochaTek ‣ 2023")
         root.state("zoomed")
         root.iconbitmap(icon_path)
+        root.option_add("*font", ("Segoe UI Emoji", 12))
 
         side_panel = Frame(root)
         side_panel.pack(side="left", fill="y", padx=WINDOW_GAP, pady=WINDOW_GAP)
@@ -102,13 +103,13 @@ class ImageSelectorApp:
         prev_button = Button(controls_frame, text="⬅️", command=self.prev_image)
         prev_button.pack(side="left", padx=ELEM_GAP)
 
-        self.select_button = Button(
-            controls_frame, text="❤️", command=self.toggle_select_image
-        )
-        self.select_button.pack(side="left", padx=ELEM_GAP)
-
         next_button = Button(controls_frame, text="➡️", command=self.next_image)
         next_button.pack(side="left", padx=ELEM_GAP)
+
+        self.select_button = Button(
+            controls_frame, text="✔️", command=self.toggle_select_image
+        )
+        self.select_button.pack(side="left", padx=ELEM_GAP)
 
         zoom_in_button = Button(controls_frame, text="➕", command=self.zoom_in)
         zoom_in_button.pack(side="left", padx=ELEM_GAP)
@@ -186,12 +187,12 @@ class ImageSelectorApp:
             self.image_label.photo = image
 
             if self.current_index in self.selected_images:
-                self.select_button.config(text="Deselect")
+                self.select_button.config(text="❌")
                 self.image_label.config(
                     borderwidth=3, bd=2, relief="solid", highlightbackground="green"
                 )
             else:
-                self.select_button.config(text="Select")
+                self.select_button.config(text="✔️")
                 self.image_label.config(borderwidth=0, relief="flat")
 
     def prev_image(self, event=None):
@@ -262,6 +263,7 @@ class ImageSelectorApp:
         export_window.title("Export")
         export_window.transient(root)  # Stack popup on top of main
         export_window.grab_set()  # Disable access to main
+        export_window.option_add("*font", ("Segoe UI Emoji", 10))
 
         tab_control = Notebook(export_window)
         save_tab = TFrame(tab_control)
