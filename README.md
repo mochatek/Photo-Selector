@@ -7,6 +7,7 @@ A Tkinter application to select photos from a folder and copy them to another fo
 - Supports zoom-in[➕] and zoom-out[➖]
 - Rotate[📐] by 90°
 - Select[✔️] and deselect[❌] images that we like to copy
+- Find[🔍] images by file name
 - View selections
 - Export selection as JSON file
 - Copy selected files directly to a destination folder

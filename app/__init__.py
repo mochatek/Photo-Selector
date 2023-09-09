@@ -16,7 +16,7 @@ from tkinter.ttk import Notebook, Frame as TFrame, Button as TButton, Progressba
 from tkinter import filedialog
 from PIL import Image, ImageTk
 from os import listdir
-from os.path import exists, join, basename
+from os.path import exists, join, basename, dirname
 from json import dump, load
 from shutil import copyfile
 from threading import Thread, Event
@@ -31,7 +31,10 @@ try:
 except:
     pass
 
-
+FONT = "Segoe UI Emoji"
+APP_FONT_SIZE = 12
+POPUP_FONT_SIZE = 10
+ENTRY_FONT_SIZE = 9
 MIN_ZOOM = -2
 MAX_ZOOM = 4
 ZOOM_FACTOR = 1.2
@@ -66,7 +69,7 @@ class ImageSelectorApp:
         root.title("Photo$ © MochaTek ‣ 2023")
         root.state("zoomed")
         root.iconbitmap(icon_path)
-        root.option_add("*font", ("Segoe UI Emoji", 12))
+        root.option_add("*font", (FONT, APP_FONT_SIZE))
 
         side_panel = Frame(root)
         side_panel.pack(side="left", fill="y", padx=WINDOW_GAP, pady=WINDOW_GAP)
@@ -120,6 +123,19 @@ class ImageSelectorApp:
         rotate_button = Button(controls_frame, text="📐", command=self.rotate_image)
         rotate_button.pack(side="left", padx=ELEM_GAP)
 
+        self.filename_entry = Entry(
+            controls_frame, width=30, relief="sunken", font=(FONT, ENTRY_FONT_SIZE)
+        )
+        self.filename_entry.pack(side="left", padx=ELEM_GAP)
+
+        find_button = Button(
+            controls_frame,
+            text="🔍",
+            font=(FONT, ENTRY_FONT_SIZE),
+            command=self.find_image,
+        )
+        find_button.pack(side="left")
+
         (
             self.image_contain_width,
             self.image_contain_height,
@@ -160,6 +176,7 @@ class ImageSelectorApp:
             self.zoom_level.reset()
             self.selected_images.clear()
             self.update_image_listbox()
+            self.filename_entry.delete(0, END)
             self.show_image()
 
     def __resize_image(self, image: Image):
@@ -185,6 +202,8 @@ class ImageSelectorApp:
             image = ImageTk.PhotoImage(image=image)
             self.image_label.config(image=image)
             self.image_label.photo = image
+            self.filename_entry.delete(0, END)
+            self.filename_entry.insert(0, basename(image_path))
 
             if self.current_index in self.selected_images:
                 self.select_button.config(text="❌")
@@ -196,6 +215,9 @@ class ImageSelectorApp:
                 self.image_label.config(borderwidth=0, relief="flat")
 
     def prev_image(self, event=None):
+        if event and event.widget == self.filename_entry:
+            return
+
         if self.image_paths:
             self.current_index = (self.current_index - 1) % len(self.image_paths)
             self.image_angle = 0
@@ -203,6 +225,9 @@ class ImageSelectorApp:
             self.show_image()
 
     def next_image(self, event=None):
+        if event and event.widget == self.filename_entry:
+            return
+
         if self.image_paths:
             self.current_index = (self.current_index + 1) % len(self.image_paths)
             self.image_angle = 0
@@ -210,6 +235,9 @@ class ImageSelectorApp:
             self.show_image()
 
     def toggle_select_image(self, event=None):
+        if event and event.widget == self.filename_entry:
+            return
+
         if self.image_paths:
             if self.current_index in self.selected_images:
                 del self.selected_images[self.current_index]
@@ -233,7 +261,7 @@ class ImageSelectorApp:
             self.show_image()
 
     def rotate_image(self, event=None):
-        self.image_angle  = (self.image_angle + 90) % 360
+        self.image_angle = (self.image_angle + 90) % 360
         self.show_image()
 
     def on_mousewheel(self, event):
@@ -241,6 +269,25 @@ class ImageSelectorApp:
             self.zoom_in()
         else:
             self.zoom_out()
+
+    def find_image(self):
+        self.image_label.focus_set()
+
+        filename = self.filename_entry.get()
+        if self.image_paths:
+            folder_path = dirname(self.image_paths[self.current_index])
+            file_path = join(folder_path, filename)
+            found_index = next(
+                (
+                    index
+                    for index, path in enumerate(self.image_paths)
+                    if path.lower() == file_path.lower()
+                ),
+                None,
+            )
+            if found_index is not None:
+                self.current_index = found_index
+                self.show_image()
 
     def update_image_listbox(self):
         self.image_listbox.delete(0, END)
@@ -263,7 +310,14 @@ class ImageSelectorApp:
         export_window.title("Export")
         export_window.transient(root)  # Stack popup on top of main
         export_window.grab_set()  # Disable access to main
-        export_window.option_add("*font", ("Segoe UI Emoji", 10))
+        export_window.option_add("*font", (FONT, POPUP_FONT_SIZE))
+
+        # Centralize popup window on screen
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        center_x = (screen_width - export_window.winfo_reqwidth()) // 3
+        center_y = (screen_height - export_window.winfo_reqheight()) // 2
+        export_window.geometry(f"+{center_x}+{center_y}")
 
         tab_control = Notebook(export_window)
         save_tab = TFrame(tab_control)
