@@ -60,6 +60,7 @@ class ImageSelectorApp:
         self.selected_images = {}
         self.zoom_level = Zoomscale(MIN_ZOOM, MAX_ZOOM)
         self.image_zoom = 0
+        self.image_angle = 0
         self.image_contain_width, self.image_contain_height = 0, 0
 
         root.title("Photo$ © MochaTek ‣ 2023")
@@ -115,6 +116,9 @@ class ImageSelectorApp:
         zoom_out_button = Button(controls_frame, text="➖", command=self.zoom_out)
         zoom_out_button.pack(side="left", padx=ELEM_GAP)
 
+        rotate_button = Button(controls_frame, text="📐", command=self.rotate_image)
+        rotate_button.pack(side="left", padx=ELEM_GAP)
+
         (
             self.image_contain_width,
             self.image_contain_height,
@@ -140,6 +144,7 @@ class ImageSelectorApp:
         root.bind("<Left>", self.prev_image)
         root.bind("<Right>", self.next_image)
         root.bind("<Return>", self.toggle_select_image)
+        root.bind("<Control-r>", self.rotate_image)
 
     def load_folder(self):
         folder_path = filedialog.askdirectory()
@@ -150,6 +155,7 @@ class ImageSelectorApp:
                 if filename.lower().endswith(SUPPORTED_IMG_FORMATS)
             ]
             self.current_index = 0
+            self.image_angle = 0
             self.zoom_level.reset()
             self.selected_images.clear()
             self.update_image_listbox()
@@ -173,6 +179,7 @@ class ImageSelectorApp:
         if self.image_paths:
             image_path = self.image_paths[self.current_index]
             image = Image.open(image_path)
+            image = image.rotate(self.image_angle, expand=True)
             image = self.__resize_image(image)
             image = ImageTk.PhotoImage(image=image)
             self.image_label.config(image=image)
@@ -190,12 +197,14 @@ class ImageSelectorApp:
     def prev_image(self, event=None):
         if self.image_paths:
             self.current_index = (self.current_index - 1) % len(self.image_paths)
+            self.image_angle = 0
             self.zoom_level.reset()
             self.show_image()
 
     def next_image(self, event=None):
         if self.image_paths:
             self.current_index = (self.current_index + 1) % len(self.image_paths)
+            self.image_angle = 0
             self.zoom_level.reset()
             self.show_image()
 
@@ -222,6 +231,10 @@ class ImageSelectorApp:
             self.image_zoom /= ZOOM_FACTOR
             self.show_image()
 
+    def rotate_image(self, event=None):
+        self.image_angle  = (self.image_angle + 90) % 360
+        self.show_image()
+
     def on_mousewheel(self, event):
         if event.delta > 0:
             self.zoom_in()
@@ -240,6 +253,7 @@ class ImageSelectorApp:
             selected_index = int(selected_index[0])
             image_index = list(self.selected_images.keys())[selected_index]
             self.current_index = image_index
+            self.image_angle = 0
             self.zoom_level.reset()
             self.show_image()
 
