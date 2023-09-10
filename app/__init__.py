@@ -64,6 +64,7 @@ class ImageSelectorApp:
         self.zoom_level = Zoomscale(MIN_ZOOM, MAX_ZOOM)
         self.image_zoom = 0
         self.image_angle = 0
+        self.image: Image = None
         self.image_contain_width, self.image_contain_height = 0, 0
 
         root.title("Photo$ © MochaTek ‣ 2023")
@@ -155,13 +156,37 @@ class ImageSelectorApp:
         self.image_label = Label(image_frame)
         self.image_label.place(relx=0.5, rely=0.5, anchor="center")
 
-        self.image_label.bind("<MouseWheel>", self.on_mousewheel)
+        self.image_label.bind("<MouseWheel>", self.zoom_image)
         self.image_listbox.bind("<<ListboxSelect>>", self.show_selected_image)
 
         root.bind("<Left>", self.prev_image)
         root.bind("<Right>", self.next_image)
         root.bind("<Return>", self.toggle_select_image)
         root.bind("<Control-r>", self.rotate_image)
+
+    def __resize_image(self, image: Image = None):
+        transformed_image = image or self.image
+        # Scale image to best fit on initial load
+        if self.zoom_level.at_base:
+            scale_x = self.image_contain_width / transformed_image.width
+            scale_y = self.image_contain_height / transformed_image.height
+            self.image_zoom = min(scale_x, scale_y)
+
+        return transformed_image.resize(
+            (
+                int(transformed_image.width * self.image_zoom),
+                int(transformed_image.height * self.image_zoom),
+            )
+        )
+
+    def __rotate_image(self, image: Image = None):
+        transformed_image = image or self.image
+        return transformed_image.rotate(self.image_angle, expand=True)
+
+    def __display_image(self, transformed_image: Image):
+        image = ImageTk.PhotoImage(image=transformed_image)
+        self.image_label.config(image=image)
+        self.image_label.image = image
 
     def load_folder(self):
         folder_path = filedialog.askdirectory()
@@ -172,38 +197,20 @@ class ImageSelectorApp:
                 if filename.lower().endswith(SUPPORTED_IMG_FORMATS)
             ]
             self.current_index = 0
-            self.image_angle = 0
-            self.zoom_level.reset()
             self.selected_images.clear()
             self.update_image_listbox()
             self.filename_entry.delete(0, END)
-            self.show_image()
+            self.load_image()
 
-    def __resize_image(self, image: Image):
-        # Scale image to best fit on initial load
-        if self.zoom_level.at_base:
-            scale_x = self.image_contain_width / image.width
-            scale_y = self.image_contain_height / image.height
-            self.image_zoom = min(scale_x, scale_y)
-
-        return image.resize(
-            (
-                int(image.width * self.image_zoom),
-                int(image.height * self.image_zoom),
-            )
-        )
-
-    def show_image(self):
+    def load_image(self):
         if self.image_paths:
             image_path = self.image_paths[self.current_index]
-            image = Image.open(image_path)
-            image = image.rotate(self.image_angle, expand=True)
-            image = self.__resize_image(image)
-            image = ImageTk.PhotoImage(image=image)
-            self.image_label.config(image=image)
-            self.image_label.photo = image
             self.filename_entry.delete(0, END)
             self.filename_entry.insert(0, basename(image_path))
+            self.image = Image.open(image_path)
+            self.image_angle = 0
+            self.zoom_level.reset()
+            self.__display_image(self.__resize_image())
 
             if self.current_index in self.selected_images:
                 self.select_button.config(text="❌")
@@ -220,9 +227,7 @@ class ImageSelectorApp:
 
         if self.image_paths:
             self.current_index = (self.current_index - 1) % len(self.image_paths)
-            self.image_angle = 0
-            self.zoom_level.reset()
-            self.show_image()
+            self.load_image()
 
     def next_image(self, event=None):
         if event and event.widget == self.filename_entry:
@@ -230,9 +235,7 @@ class ImageSelectorApp:
 
         if self.image_paths:
             self.current_index = (self.current_index + 1) % len(self.image_paths)
-            self.image_angle = 0
-            self.zoom_level.reset()
-            self.show_image()
+            self.load_image()
 
     def toggle_select_image(self, event=None):
         if event and event.widget == self.filename_entry:
@@ -246,25 +249,28 @@ class ImageSelectorApp:
                     self.current_index
                 ]
             self.update_image_listbox()
-            self.show_image()
+            self.load_image()
 
     def zoom_in(self):
-        self.zoom_level.up()
-        if self.zoom_level.has_changed:
-            self.image_zoom *= ZOOM_FACTOR
-            self.show_image()
+        if self.image:
+            self.zoom_level.up()
+            if self.zoom_level.has_changed:
+                self.image_zoom *= ZOOM_FACTOR
+                self.__display_image(self.__resize_image(self.__rotate_image()))
 
     def zoom_out(self):
-        self.zoom_level.down()
-        if self.zoom_level.has_changed:
-            self.image_zoom /= ZOOM_FACTOR
-            self.show_image()
+        if self.image:
+            self.zoom_level.down()
+            if self.zoom_level.has_changed:
+                self.image_zoom /= ZOOM_FACTOR
+                self.__display_image(self.__resize_image(self.__rotate_image()))
 
     def rotate_image(self, event=None):
-        self.image_angle = (self.image_angle + 90) % 360
-        self.show_image()
+        if self.image:
+            self.image_angle = (self.image_angle - 90) % 360
+            self.__display_image(self.__resize_image(self.__rotate_image()))
 
-    def on_mousewheel(self, event):
+    def zoom_image(self, event):
         if event.delta > 0:
             self.zoom_in()
         else:
@@ -287,7 +293,7 @@ class ImageSelectorApp:
             )
             if found_index is not None:
                 self.current_index = found_index
-                self.show_image()
+                self.load_image()
 
     def update_image_listbox(self):
         self.image_listbox.delete(0, END)
@@ -301,9 +307,7 @@ class ImageSelectorApp:
             selected_index = int(selected_index[0])
             image_index = list(self.selected_images.keys())[selected_index]
             self.current_index = image_index
-            self.image_angle = 0
-            self.zoom_level.reset()
-            self.show_image()
+            self.load_image()
 
     def open_export_popup(self, root: Tk, selected_files: list):
         export_window = Toplevel(root)
